@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Bill — Shop Ledger</title>
+<style>
+  :root{
+    --bg: #0e0d14;
+    --panel: #16141f;
+    --line: #2a2735;
+    --emerald: #2bb789;
+    --amber: #e8b14d;
+    --ruby: #ff5d7a;
+    --amethyst: #9b6bff;
+    --text: #ece9f5;
+    --muted: #8b87a0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(circle at 20% 0%, #1c1828 0%, var(--bg) 55%);
+    color:var(--text);
+    font-family: 'Segoe UI', Avenir, sans-serif;
+    padding:32px 16px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  /* --- TAB NAV --- */
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:20px;
+    width:100%;
+    max-width:460px;
+  }
+  .tab-btn{
+    flex:1;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--muted);
+    font-size:0.9rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .2s;
+  }
+  .tab-btn.active{
+    background:var(--emerald);
+    border-color:var(--emerald);
+    color:#0e0d14;
+  }
+
+  /* --- CARD --- */
+  .card{
+    width:100%;
+    max-width:460px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:28px 26px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  }
+  h1{ font-size:1.4rem; margin:0 0 4px; }
+  p.sub{ margin:0 0 22px; color:var(--muted); font-size:0.85rem; }
+
+  .section-label{
+    font-size:0.75rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    margin:18px 0 10px;
+  }
+  .section-label.deduct{ color:var(--ruby); }
+
+  .item{ margin-bottom:16px; }
+  .item-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  .item-name{ font-weight:600; font-size:0.96rem; }
+  .item-rate{ color:var(--muted); font-size:0.78rem; }
+  .item-row{
+    display:grid;
+    grid-template-columns: 1fr 92px;
+    gap:10px;
+    align-items:center;
+  }
+  input[type="number"]{
+    background:#1d1a29;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:8px;
+    height:42px;
+    padding:0 12px;
+    font-size:1rem;
+    width:100%;
+  }
+  input[type="number"]:focus{ outline:none; border-color:var(--emerald); }
+  .line-total{ text-align:right; font-weight:600; font-size:0.95rem; }
+  .line-total.add{ color:var(--amber); }
+  .line-total.sub{ color:var(--ruby); }
+
+  hr{ border:none; border-top:1px solid var(--line); margin:20px 0; }
+
+  .total-box{
+    background: linear-gradient(135deg, #1a2f28, #161325);
+    border:1px solid var(--emerald);
+    border-radius:12px;
+    padding:18px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .total-label{ color:var(--muted); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em; }
+  .total-value{ font-size:1.8rem; font-weight:700; color:var(--emerald); }
+
+  .btn-row{ display:flex; gap:10px; margin-top:14px; }
+  .btn-save{
+    flex:1;
+    padding:11px;
+    background:var(--emerald);
+    border:none;
+    border-radius:8px;
+    color:#0e0d14;
+    font-size:0.9rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-save:hover{ opacity:0.85; }
+  .btn-clear{
+    padding:11px 16px;
+    background:none;
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--muted);
+    font-size:0.9rem;
+    cursor:pointer;
+  }
+  .btn-clear:hover{ border-color:var(--ruby); color:var(--ruby); }
+
+  /* toast */
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(60px);
+    background:var(--emerald);
+    color:#0e0d14;
+    padding:10px 22px;
+    border-radius:20px;
+    font-weight:700;
+    font-size:0.88rem;
+    transition:transform .3s ease;
+    pointer-events:none;
+  }
+  .toast.show{ transform:translateX(-50%) translateY(0); }
+
+  /* --- RECORDS PAGE --- */
+  #recordsPage{ display:none; width:100%; max-width:460px; }
+  .rec-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  .rec-header h2{ margin:0; font-size:1.2rem; }
+  .btn-clear-all{
+    background:none;
+    border:1px solid var(--ruby);
+    color:var(--ruby);
+    border-radius:8px;
+    padding:6px 12px;
+    font-size:0.8rem;
+    cursor:pointer;
+  }
+
+  .record-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .record-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 16px 10px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .record-date{ font-size:0.85rem; color:var(--muted); }
+  .record-total{ font-weight:700; color:var(--emerald); font-size:1.05rem; }
+  .record-arrow{ color:var(--muted); font-size:0.8rem; transition:transform .2s; }
+  .record-card.open .record-arrow{ transform:rotate(180deg); }
+
+  .record-body{
+    display:none;
+    padding:0 16px 14px;
+    border-top:1px solid var(--line);
+  }
+  .record-card.open .record-body{ display:block; }
+
+  .rec-row{
+    display:flex;
+    justify-content:space-between;
+    padding:5px 0;
+    font-size:0.88rem;
+    border-bottom:1px solid #1e1c2a;
+  }
+  .rec-row:last-child{ border-bottom:none; }
+  .rec-row .rname{ color:var(--muted); }
+  .rec-row .rval.add{ color:var(--amber); }
+  .rec-row .rval.sub{ color:var(--ruby); }
+  .rec-row .rval.total{ color:var(--emerald); font-weight:700; }
+
+  .del-btn{
+    margin-top:10px;
+    background:none;
+    border:none;
+    color:var(--ruby);
+    font-size:0.8rem;
+    cursor:pointer;
+    text-decoration:underline;
+    padding:0;
+  }
+
+  .no-records{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 0;
+    font-size:0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabBill" onclick="showTab('bill')">📋 Daily Bill</button>
+  <button class="tab-btn" id="tabRecords" onclick="showTab('records')">🗂 Saved Records</button>
+</div>
+
+<!-- BILL PAGE -->
+<div class="card" id="billPage">
+  <h1>Daily Bill</h1>
+  <p class="sub">Enter quantities or amounts — totals are calculated automatically.</p>
+
+  <div class="section-label">Items (Added)</div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Milk</span><span class="item-rate">Rs 80 / litre</span></div>
+    <div class="item-row">
+      <input type="number" id="milkQty" placeholder="Litres" step="any" min="0">
+      <span class="line-total add" id="milkTotal">Rs 0</span>
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Curd</span><span class="item-rate">Rs 100 / kg</span></div>
+    <div class="item-row">
+      <input type="number" id="curdQty" placeholder="Kg" step="any" min="0">
+      <span class="line-total add" id="curdTotal">Rs 0</span>
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Ghee</span><span class="item-rate">Rs 200 / piece</span></div>
+    <div class="item-row">
+      <input type="number" id="gheeQty" placeholder="Pieces" step="any" min="0">
+      <span class="line-total add" id="gheeTotal">Rs 0</span>
+    </div>
+  </div>
+
+  <div class="section-label deduct">Payments / Deductions (Subtracted)</div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Bread</span><span class="item-rate">Enter cost directly</span></div>
+    <div class="item-row">
+      <input type="number" id="breadCost" placeholder="Total cost" step="any" min="0">
+      <span class="line-total sub" id="breadTotal">- Rs 0</span>
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Suresh Bondi</span><span class="item-rate">Enter cost directly</span></div>
+    <div class="item-row">
+      <input type="number" id="sureshCost" placeholder="Total cost" step="any" min="0">
+      <span class="line-total sub" id="sureshTotal">- Rs 0</span>
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Cash</span><span class="item-rate">Enter amount directly</span></div>
+    <div class="item-row">
+      <input type="number" id="cashCost" placeholder="Amount" step="any" min="0">
+      <span class="line-total sub" id="cashTotal">- Rs 0</span>
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">Bharat Pay</span><span class="item-rate">Enter amount directly</span></div>
+    <div class="item-row">
+      <input type="number" id="bharatCost" placeholder="Amount" step="any" min="0">
+      <span class="line-total sub" id="bharatTotal">- Rs 0</span>
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-head"><span class="item-name">SBI UPI</span><span class="item-rate">Enter amount directly</span></div>
+    <div class="item-row">
+      <input type="number" id="sbiCost" placeholder="Amount" step="any" min="0">
+      <span class="line-total sub" id="sbiTotal">- Rs 0</span>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="total-box">
+    <span class="total-label">Grand Total</span>
+    <span class="total-value" id="grandTotal">Rs 0</span>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-save" id="saveBtn">💾 Save Record</button>
+    <button class="btn-clear" id="clearAll">Clear</button>
+  </div>
+</div>
+
+<!-- RECORDS PAGE -->
+<div id="recordsPage">
+  <div class="rec-header">
+    <h2>Saved Records</h2>
+    <button class="btn-clear-all" onclick="clearAllRecords()">Delete All</button>
+  </div>
+  <div id="recordsList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const MILK_RATE = 80, CURD_RATE = 100, GHEE_RATE = 200;
+
+  const ids = ['milkQty','curdQty','gheeQty','breadCost','sureshCost','cashCost','bharatCost','sbiCost'];
+  const get = id => document.getElementById(id);
+
+  function fmt(n){ return 'Rs ' + (Math.round(n*100)/100).toLocaleString(); }
+
+  let grandValue = 0;
+
+  function calculate(){
+    const milk  = (parseFloat(get('milkQty').value)||0) * MILK_RATE;
+    const curd  = (parseFloat(get('curdQty').value)||0) * CURD_RATE;
+    const ghee  = (parseFloat(get('gheeQty').value)||0) * GHEE_RATE;
+    const bread = parseFloat(get('breadCost').value)||0;
+    const suresh= parseFloat(get('sureshCost').value)||0;
+    const cash  = parseFloat(get('cashCost').value)||0;
+    const bharat= parseFloat(get('bharatCost').value)||0;
+    const sbi   = parseFloat(get('sbiCost').value)||0;
+
+    get('milkTotal').textContent   = fmt(milk);
+    get('curdTotal').textContent   = fmt(curd);
+    get('gheeTotal').textContent   = fmt(ghee);
+    get('breadTotal').textContent  = '- '+fmt(bread);
+    get('sureshTotal').textContent = '- '+fmt(suresh);
+    get('cashTotal').textContent   = '- '+fmt(cash);
+    get('bharatTotal').textContent = '- '+fmt(bharat);
+    get('sbiTotal').textContent    = '- '+fmt(sbi);
+
+    grandValue = milk + curd + ghee - bread - suresh - cash - bharat - sbi;
+    get('grandTotal').textContent = fmt(grandValue);
+  }
+
+  ids.forEach(id => get(id).addEventListener('input', calculate));
+
+  get('clearAll').onclick = () => { ids.forEach(id => get(id).value=''); calculate(); };
+
+  // ---- SAVE ----
+  get('saveBtn').onclick = () => {
+    const record = {
+      id: Date.now(),
+      date: new Date().toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+      milk:   parseFloat(get('milkQty').value)||0,
+      curd:   parseFloat(get('curdQty').value)||0,
+      ghee:   parseFloat(get('gheeQty').value)||0,
+      bread:  parseFloat(get('breadCost').value)||0,
+      suresh: parseFloat(get('sureshCost').value)||0,
+      cash:   parseFloat(get('cashCost').value)||0,
+      bharat: parseFloat(get('bharatCost').value)||0,
+      sbi:    parseFloat(get('sbiCost').value)||0,
+      grand:  grandValue
+    };
+    const records = JSON.parse(localStorage.getItem('shopBills') || '[]');
+    records.unshift(record);
+    localStorage.setItem('shopBills', JSON.stringify(records));
+    showToast('✅ Bill saved!');
+  };
+
+  // ---- RECORDS ----
+  function renderRecords(){
+    const records = JSON.parse(localStorage.getItem('shopBills') || '[]');
+    const list = get('recordsList');
+    if(!records.length){
+      list.innerHTML = '<div class="no-records">No records saved yet.</div>';
+      return;
+    }
+    list.innerHTML = records.map((r,i) => `
+      <div class="record-card" id="rc_${r.id}">
+        <div class="record-top" onclick="toggleRecord(${r.id})">
+          <div>
+            <div style="font-weight:600;font-size:0.92rem">#${records.length-i} &nbsp;<span class="record-date">${r.date}</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="record-total">${fmt(r.grand)}</span>
+            <span class="record-arrow">▼</span>
+          </div>
+        </div>
+        <div class="record-body">
+          <div class="rec-row"><span class="rname">Milk (${r.milk} L × Rs80)</span><span class="rval add">${fmt(r.milk*MILK_RATE)}</span></div>
+          <div class="rec-row"><span class="rname">Curd (${r.curd} kg × Rs100)</span><span class="rval add">${fmt(r.curd*CURD_RATE)}</span></div>
+          <div class="rec-row"><span class="rname">Ghee (${r.ghee} pcs × Rs200)</span><span class="rval add">${fmt(r.ghee*GHEE_RATE)}</span></div>
+          <div class="rec-row"><span class="rname">Bread</span><span class="rval sub">- ${fmt(r.bread)}</span></div>
+          <div class="rec-row"><span class="rname">Suresh Bondi</span><span class="rval sub">- ${fmt(r.suresh)}</span></div>
+          <div class="rec-row"><span class="rname">Cash</span><span class="rval sub">- ${fmt(r.cash)}</span></div>
+          <div class="rec-row"><span class="rname">Bharat Pay</span><span class="rval sub">- ${fmt(r.bharat)}</span></div>
+          <div class="rec-row"><span class="rname">SBI UPI</span><span class="rval sub">- ${fmt(r.sbi)}</span></div>
+          <div class="rec-row" style="margin-top:6px"><span class="rname" style="font-weight:600">Grand Total</span><span class="rval total">${fmt(r.grand)}</span></div>
+          <button class="del-btn" onclick="deleteRecord(${r.id})">🗑 Delete this record</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleRecord(id){
+    const card = document.getElementById('rc_'+id);
+    card.classList.toggle('open');
+  }
+
+  function deleteRecord(id){
+    let records = JSON.parse(localStorage.getItem('shopBills') || '[]');
+    records = records.filter(r => r.id !== id);
+    localStorage.setItem('shopBills', JSON.stringify(records));
+    renderRecords();
+    showToast('🗑 Record deleted');
+  }
+
+  function clearAllRecords(){
+    if(confirm('Delete all saved records?')){
+      localStorage.removeItem('shopBills');
+      renderRecords();
+      showToast('All records cleared');
+    }
+  }
+
+  // ---- TABS ----
+  function showTab(tab){
+    if(tab === 'bill'){
+      get('billPage').style.display = 'block';
+      get('recordsPage').style.display = 'none';
+      get('tabBill').classList.add('active');
+      get('tabRecords').classList.remove('active');
+    } else {
+      get('billPage').style.display = 'none';
+      get('recordsPage').style.display = 'block';
+      get('tabBill').classList.remove('active');
+      get('tabRecords').classList.add('active');
+      renderRecords();
+    }
+  }
+
+  // ---- TOAST ----
+  function showToast(msg){
+    const t = get('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  calculate();
+</script>
+</body>
+</html>
